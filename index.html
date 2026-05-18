@@ -39,7 +39,7 @@
     header {
       border-bottom: 2px solid var(--fg);
       padding-bottom: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     header h1 {
@@ -48,11 +48,23 @@
       letter-spacing: -0.01em;
     }
 
-    header p {
-      margin-top: 0.375rem;
+    /* Intro */
+    .intro {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .intro h2 {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .intro p {
       font-size: 0.8125rem;
       color: var(--muted);
-      max-width: 680px;
+      max-width: 720px;
     }
 
     /* Form */
@@ -71,8 +83,8 @@
       height: 90px;
       padding: 0.625rem 0.75rem;
       border: 1px solid var(--border);
-      font-family: inherit;
-      font-size: 0.875rem;
+      font-family: ui-monospace, 'Courier New', monospace;
+      font-size: 0.8125rem;
       resize: vertical;
       outline: none;
       color: var(--fg);
@@ -137,52 +149,6 @@
       opacity: 0;
       cursor: pointer;
     }
-
-    /* Config */
-    .config-toggle {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 0.75rem;
-      cursor: pointer;
-      padding: 0;
-      margin-left: auto;
-    }
-
-    .config-toggle:hover { color: var(--fg); }
-
-    .config-panel {
-      margin-top: 0.875rem;
-      padding: 1rem;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      display: none;
-    }
-
-    .config-panel.open { display: block; }
-
-    .config-panel input {
-      width: 100%;
-      margin-top: 0.375rem;
-      padding: 0.5rem 0.625rem;
-      border: 1px solid var(--border);
-      font-family: ui-monospace, 'Courier New', monospace;
-      font-size: 0.8125rem;
-      background: var(--bg);
-      color: var(--fg);
-      outline: none;
-    }
-
-    .config-panel input:focus { border-color: var(--fg); }
-
-    .config-note {
-      margin-top: 0.5rem;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    .config-note a { color: var(--muted); }
 
     /* Status */
     .status {
@@ -322,12 +288,19 @@
 
   <header>
     <h1>Cookie SameSite Checker</h1>
-    <p>Analiza el atributo SameSite en cookies de múltiples dominios. Detecta configuraciones incorrectas que pueden facilitar CSRF, XSS y timing attacks.</p>
   </header>
 
+  <div class="intro">
+    <h2>Atributo SameSite en cookies</h2>
+    <p>El atributo SameSite es una contramedida eficaz contra la falsificación de solicitudes entre sitios (CSRF), Cross Site Scripting (XSS) y ataques de sincronización.
+    Controla cómo se envían las cookies en solicitudes entre sitios.
+    Es recomendable configurarlo como "Strict" o "Lax" para proteger la integridad de la sesión y mitigar riesgos de seguridad asociados.
+    Las cookies con SameSite=None deben incluir Secure.</p>
+  </div>
+
   <div style="margin-bottom:1.5rem">
-    <label class="form-label" for="domains">Dominios</label>
-    <textarea id="domains" placeholder="ejemplo.com, otro-sitio.org&#10;target.com&#10;# líneas con # son ignoradas"></textarea>
+    <label class="form-label" for="targets">URLs / Dominios</label>
+    <textarea id="targets" placeholder="ejemplo.com/login, otro-sitio.org/app&#10;https://target.com/admin&#10;# líneas con # son ignoradas"></textarea>
     <div class="actions">
       <button class="btn" id="scan-btn" onclick="scan()">Escanear</button>
       <label class="file-label">
@@ -335,18 +308,6 @@
         <input type="file" accept=".txt" onchange="loadFile(event)">
       </label>
       <button class="btn btn-ghost" onclick="clearAll()">Limpiar</button>
-      <button class="config-toggle" onclick="toggleConfig()">⚙ API</button>
-    </div>
-
-    <div class="config-panel" id="config-panel">
-      <span class="form-label">URL del backend</span>
-      <input type="url" id="api-url"
-             placeholder="https://tu-worker.workers.dev  —o—  http://localhost:5000"
-             oninput="saveApiUrl()">
-      <p class="config-note">
-        Requiere backend: Cloudflare Worker (recomendado para GitHub Pages) o servidor local.
-        <a href="https://github.com/Juguitos/cookies-same-site-checker#setup" target="_blank">Ver README</a>.
-      </p>
     </div>
   </div>
 
@@ -372,7 +333,7 @@
       <table>
         <thead>
           <tr>
-            <th>Dominio</th>
+            <th>URL</th>
             <th>Cookie</th>
             <th>SameSite</th>
             <th>Secure</th>
@@ -388,69 +349,63 @@
 
 </div>
 <script>
+const BACKEND = "https://cookies-same-site-checker.baezredteam.workers.dev";
+
 let allResults = [];
 let activeFilter = 'all';
 
-(function init() {
-  document.getElementById('api-url').value = localStorage.getItem('apiUrl') || '';
-  document.getElementById('domains').addEventListener('keydown', e => {
-    if (e.ctrlKey && e.key === 'Enter') scan();
-  });
-})();
-
-function toggleConfig() {
-  document.getElementById('config-panel').classList.toggle('open');
-}
-
-function saveApiUrl() {
-  localStorage.setItem('apiUrl', document.getElementById('api-url').value.trim());
-}
-
-function getApiUrl() {
-  return document.getElementById('api-url').value.trim() || 'http://localhost:5000';
-}
+document.getElementById('targets').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') scan();
+});
 
 function loadFile(e) {
   const f = e.target.files[0];
   if (!f) return;
   const r = new FileReader();
-  r.onload = ev => { document.getElementById('domains').value = ev.target.result; };
+  r.onload = ev => { document.getElementById('targets').value = ev.target.result; };
   r.readAsText(f);
   e.target.value = '';
 }
 
 function clearAll() {
-  document.getElementById('domains').value = '';
+  document.getElementById('targets').value = '';
   setStatus('');
   document.getElementById('results-section').style.display = 'none';
   allResults = [];
 }
 
-function parseDomains(text) {
-  return [...new Set(
-    text.split(/[\n,]+/)
-      .map(d => d.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase())
-      .filter(d => d && !d.startsWith('#'))
-  )];
+function parseTargets(text) {
+  const seen = new Set();
+  const result = [];
+  for (const line of text.split(/[\n,]+/)) {
+    const t = line.trim().replace(/^https?:\/\//i, '');
+    if (!t || t.startsWith('#')) continue;
+    const key = t.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(t);
+    }
+  }
+  return result;
 }
 
 async function scan() {
-  const domains = parseDomains(document.getElementById('domains').value);
-  if (!domains.length) { setStatus('Ingresa al menos un dominio.', true); return; }
+  const targets = parseTargets(document.getElementById('targets').value);
+  if (!targets.length) { setStatus('Ingresa al menos una URL.', true); return; }
 
   const btn = document.getElementById('scan-btn');
   btn.disabled = true;
   btn.textContent = 'Escaneando…';
-  setStatus(`Contactando backend — ${domains.length} dominio(s)…`);
+  setStatus(`Escaneando ${targets.length} objetivo(s)…`);
 
   try {
-    const resp = await fetch(`${getApiUrl()}/check?domains=${encodeURIComponent(domains.join(','))}`);
+    const resp = await fetch(`${BACKEND}/check?domains=${encodeURIComponent(targets.join(','))}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     allResults = await resp.json();
     setStatus('');
     renderResults();
   } catch (err) {
-    setStatus(`No se pudo conectar al backend: ${err.message}`, true);
+    setStatus(`Error al contactar backend: ${err.message}`, true);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Escanear';
@@ -474,7 +429,7 @@ function renderResults() {
   document.getElementById('results-section').style.display = 'block';
   const totalCookies = allResults.reduce((n, r) => n + (r.cookies ? r.cookies.length : 0), 0);
   const alto = allResults.flatMap(r => r.cookies || []).filter(c => c.risk === 'ALTO').length;
-  let stats = `${allResults.length} dominio(s) · ${totalCookies} cookie(s)`;
+  let stats = `${allResults.length} objetivo(s) · ${totalCookies} cookie(s)`;
   if (alto) stats += ` · <span style="color:var(--red);font-weight:600">${alto} alto</span>`;
   document.getElementById('results-stats').innerHTML = stats;
   renderRows();
@@ -501,20 +456,20 @@ function buildRows() {
   for (const r of allResults) {
     if (r.error) {
       if (activeFilter !== 'all') continue;
-      rows.push({ rank: 99, domain: r.domain, el: makeErrorRow(r) });
+      rows.push({ rank: 99, key: r.domain, el: makeErrorRow(r) });
       continue;
     }
     if (!r.cookies.length) {
       if (activeFilter !== 'all') continue;
-      rows.push({ rank: 50, domain: r.domain, el: makeNoCookiesRow(r.domain) });
+      rows.push({ rank: 50, key: r.domain, el: makeNoCookiesRow(r.domain) });
       continue;
     }
     for (const c of r.cookies) {
       if (activeFilter !== 'all' && c.risk !== activeFilter) continue;
-      rows.push({ rank: riskRank(c.risk), domain: r.domain, el: makeCookieRow(r.domain, c) });
+      rows.push({ rank: riskRank(c.risk), key: r.domain, el: makeCookieRow(r.domain, c) });
     }
   }
-  rows.sort((a, b) => a.rank - b.rank || a.domain.localeCompare(b.domain));
+  rows.sort((a, b) => a.rank - b.rank || a.key.localeCompare(b.key));
   return rows;
 }
 
@@ -525,7 +480,7 @@ function riskRank(risk) {
 function makeCookieRow(domain, c) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td>${esc(domain)}</td>
+    <td><code>${esc(domain)}</code></td>
     <td><code>${esc(c.name)}</code></td>
     <td>${fmtSameSite(c)}</td>
     <td class="${c.secure ? 'check' : 'cross'}">${c.secure ? '✔' : '✘'}</td>
@@ -538,7 +493,7 @@ function makeCookieRow(domain, c) {
 function makeErrorRow(r) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td>${esc(r.domain)}</td>
+    <td><code>${esc(r.domain)}</code></td>
     <td>—</td><td>—</td><td>—</td><td>—</td>
     <td><span class="badge badge-error">ERROR</span></td>
     <td style="font-size:0.75rem;color:var(--muted)">${esc(r.error)}</td>`;
@@ -548,7 +503,7 @@ function makeErrorRow(r) {
 function makeNoCookiesRow(domain) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td>${esc(domain)}</td>
+    <td><code>${esc(domain)}</code></td>
     <td colspan="5" style="color:var(--muted)">Sin cookies Set-Cookie en respuesta</td>
     <td>—</td>`;
   return tr;
@@ -576,7 +531,7 @@ function esc(s) {
 }
 
 function exportCSV() {
-  const rows = [['Dominio', 'Cookie', 'SameSite', 'Secure', 'HttpOnly', 'Riesgo', 'Hallazgo']];
+  const rows = [['URL', 'Cookie', 'SameSite', 'Secure', 'HttpOnly', 'Riesgo', 'Hallazgo']];
   for (const r of allResults) {
     if (r.error) { rows.push([r.domain, '', '', '', '', 'ERROR', r.error]); continue; }
     if (!r.cookies.length) { rows.push([r.domain, '', '', '', '', '', 'Sin cookies']); continue; }
