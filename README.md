@@ -18,16 +18,21 @@ El frontend es estático (GitHub Pages). Necesita un backend que haga las petici
 
 ### Opción A — Cloudflare Worker (recomendado para GitHub Pages)
 
-1. Ve a [workers.cloudflare.com](https://workers.cloudflare.com) → Create Worker
-2. Pega el contenido de `worker.js`
-3. Deploy → copia la URL `*.workers.dev`
-4. En el frontend, haz clic en **⚙ API** y pega esa URL
-
-O con Wrangler CLI:
+**Vía Wrangler (más fácil):**
 
 ```bash
-npx wrangler deploy worker.js --name cookie-checker
+npx wrangler login
+npx wrangler deploy
 ```
+
+Copia la URL `*.workers.dev` que imprime y pégala en **⚙ API** del frontend.
+
+**Vía dashboard (manual):**
+
+1. [workers.cloudflare.com](https://workers.cloudflare.com) → Workers & Pages → Create → **Create Worker**
+2. Haz clic en **Edit Code** (editor inline — NO uses el botón Upload/deploy)
+3. Borra el código de ejemplo, pega el contenido de `worker.js`, → **Save & Deploy**
+4. Copia la URL `*.workers.dev` → pégala en **⚙ API** del frontend
 
 ### Opción B — Backend local (Python)
 
