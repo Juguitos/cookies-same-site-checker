@@ -2,8 +2,8 @@
  * Cloudflare Worker — Cookie SameSite Checker backend
  *
  * Deploy:
- *   1. Dashboard: workers.cloudflare.com → Create Worker → paste this file
- *   2. CLI:  npx wrangler deploy worker.js --name cookie-checker
+ *   Dashboard: workers.cloudflare.com → Create Worker → Edit Code → pega este archivo
+ *   (Sintaxis Service Worker — compatible con el editor del dashboard sin Wrangler)
  *
  * After deploy, paste your *.workers.dev URL into the frontend "⚙ API" field.
  */
@@ -87,31 +87,33 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export default {
-  async fetch(request) {
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: CORS_HEADERS });
-    }
+addEventListener("fetch", event => {
+  event.respondWith(handleRequest(event.request));
+});
 
-    const url = new URL(request.url);
-    if (url.pathname !== "/check") {
-      return new Response("Not found", { status: 404 });
-    }
+async function handleRequest(request) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
 
-    const raw = url.searchParams.get("domains") || "";
-    const domains = [...new Set(raw.split(",").map(d => d.trim().toLowerCase()).filter(Boolean))];
+  const url = new URL(request.url);
+  if (url.pathname !== "/check") {
+    return new Response("Not found", { status: 404 });
+  }
 
-    if (!domains.length) {
-      return new Response(JSON.stringify({ error: "No domains provided" }), {
-        status: 400,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      });
-    }
+  const raw = url.searchParams.get("domains") || "";
+  const domains = [...new Set(raw.split(",").map(d => d.trim().toLowerCase()).filter(Boolean))];
 
-    const results = await Promise.all(domains.map(checkDomain));
-
-    return new Response(JSON.stringify(results), {
+  if (!domains.length) {
+    return new Response(JSON.stringify({ error: "No domains provided" }), {
+      status: 400,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
-  },
-};
+  }
+
+  const results = await Promise.all(domains.map(checkDomain));
+
+  return new Response(JSON.stringify(results), {
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
