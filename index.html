@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cookie SameSite Checker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666666;
+      --border: #d0d0d0;
+      --surface: #f7f7f7;
+      --red: #c00000;
+      --red-bg: #fff0f0;
+      --orange: #b54e00;
+      --orange-bg: #fff6ee;
+      --green: #006600;
+      --green-bg: #f0fff0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 2px solid var(--fg);
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      margin-top: 0.375rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      max-width: 680px;
+    }
+
+    /* Form */
+    .form-label {
+      display: block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 90px;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 0.875rem;
+      resize: vertical;
+      outline: none;
+      color: var(--fg);
+      background: var(--bg);
+    }
+
+    textarea:focus { border-color: var(--fg); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.625rem;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--fg);
+      background: var(--fg);
+      color: var(--bg);
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .btn:hover { background: #333; border-color: #333; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: var(--bg);
+      color: var(--fg);
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover { border-color: var(--fg); background: var(--surface); }
+
+    .file-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .file-label:hover { border-color: var(--fg); background: var(--surface); }
+
+    .file-label input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* Config */
+    .config-toggle {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 0;
+      margin-left: auto;
+    }
+
+    .config-toggle:hover { color: var(--fg); }
+
+    .config-panel {
+      margin-top: 0.875rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: none;
+    }
+
+    .config-panel.open { display: block; }
+
+    .config-panel input {
+      width: 100%;
+      margin-top: 0.375rem;
+      padding: 0.5rem 0.625rem;
+      border: 1px solid var(--border);
+      font-family: ui-monospace, 'Courier New', monospace;
+      font-size: 0.8125rem;
+      background: var(--bg);
+      color: var(--fg);
+      outline: none;
+    }
+
+    .config-panel input:focus { border-color: var(--fg); }
+
+    .config-note {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .config-note a { color: var(--muted); }
+
+    /* Status */
+    .status {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      margin-top: 0.75rem;
+      min-height: 1.25rem;
+    }
+
+    .status.error { color: var(--red); }
+
+    /* Results */
+    .results-section { margin-top: 2rem; }
+
+    .results-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0.75rem;
+    }
+
+    .results-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .results-stats {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .results-actions { margin-left: auto; }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .filter-btn {
+      padding: 0.25rem 0.625rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .filter-btn:hover { border-color: var(--fg); color: var(--fg); }
+
+    .filter-btn.active {
+      background: var(--fg);
+      border-color: var(--fg);
+      color: var(--bg);
+    }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      background: var(--fg);
+      color: var(--bg);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface); }
+
+    code {
+      font-family: ui-monospace, 'Courier New', monospace;
+      font-size: 0.8125rem;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-alto   { background: var(--red-bg);    color: var(--red);    }
+    .badge-medio  { background: var(--orange-bg); color: var(--orange); }
+    .badge-info   { background: var(--green-bg);  color: var(--green);  }
+    .badge-error  { border: 1px solid var(--red); color: var(--red);    }
+
+    /* SameSite */
+    .ss-missing  { color: var(--red);    font-style: italic; }
+    .ss-none-bad { color: var(--red);    font-weight: 600;   }
+    .ss-none-ok  { color: var(--orange);                     }
+    .ss-good     { color: var(--green);                      }
+
+    .check { color: var(--green); }
+    .cross  { color: var(--red);  }
+
+    /* Empty */
+    .empty-row td {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 600px) {
+      .wrap { padding: 1.5rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Cookie SameSite Checker</h1>
+    <p>Analiza el atributo SameSite en cookies de múltiples dominios. Detecta configuraciones incorrectas que pueden facilitar CSRF, XSS y timing attacks.</p>
+  </header>
+
+  <div style="margin-bottom:1.5rem">
+    <label class="form-label" for="domains">Dominios</label>
+    <textarea id="domains" placeholder="ejemplo.com, otro-sitio.org&#10;target.com&#10;# líneas con # son ignoradas"></textarea>
+    <div class="actions">
+      <button class="btn" id="scan-btn" onclick="scan()">Escanear</button>
+      <label class="file-label">
+        Subir .txt
+        <input type="file" accept=".txt" onchange="loadFile(event)">
+      </label>
+      <button class="btn btn-ghost" onclick="clearAll()">Limpiar</button>
+      <button class="config-toggle" onclick="toggleConfig()">⚙ API</button>
+    </div>
+
+    <div class="config-panel" id="config-panel">
+      <span class="form-label">URL del backend</span>
+      <input type="url" id="api-url"
+             placeholder="https://tu-worker.workers.dev  —o—  http://localhost:5000"
+             oninput="saveApiUrl()">
+      <p class="config-note">
+        Requiere backend: Cloudflare Worker (recomendado para GitHub Pages) o servidor local.
+        <a href="https://github.com/Juguitos/cookies-same-site-checker#setup" target="_blank">Ver README</a>.
+      </p>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="results-section" id="results-section" style="display:none">
+    <div class="results-meta">
+      <span class="results-label">Resultados</span>
+      <span class="results-stats" id="results-stats"></span>
+      <div class="results-actions">
+        <button class="btn btn-ghost" onclick="exportCSV()">Exportar CSV</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('all', this)">Todos</button>
+      <button class="filter-btn" onclick="setFilter('ALTO', this)">Alto</button>
+      <button class="filter-btn" onclick="setFilter('MEDIO', this)">Medio</button>
+      <button class="filter-btn" onclick="setFilter('INFORMATIVO', this)">Info</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dominio</th>
+            <th>Cookie</th>
+            <th>SameSite</th>
+            <th>Secure</th>
+            <th>HttpOnly</th>
+            <th>Riesgo</th>
+            <th>Hallazgo</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+<script>
+let allResults = [];
+let activeFilter = 'all';
+
+(function init() {
+  document.getElementById('api-url').value = localStorage.getItem('apiUrl') || '';
+  document.getElementById('domains').addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') scan();
+  });
+})();
+
+function toggleConfig() {
+  document.getElementById('config-panel').classList.toggle('open');
+}
+
+function saveApiUrl() {
+  localStorage.setItem('apiUrl', document.getElementById('api-url').value.trim());
+}
+
+function getApiUrl() {
+  return document.getElementById('api-url').value.trim() || 'http://localhost:5000';
+}
+
+function loadFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => { document.getElementById('domains').value = ev.target.result; };
+  r.readAsText(f);
+  e.target.value = '';
+}
+
+function clearAll() {
+  document.getElementById('domains').value = '';
+  setStatus('');
+  document.getElementById('results-section').style.display = 'none';
+  allResults = [];
+}
+
+function parseDomains(text) {
+  return [...new Set(
+    text.split(/[\n,]+/)
+      .map(d => d.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase())
+      .filter(d => d && !d.startsWith('#'))
+  )];
+}
+
+async function scan() {
+  const domains = parseDomains(document.getElementById('domains').value);
+  if (!domains.length) { setStatus('Ingresa al menos un dominio.', true); return; }
+
+  const btn = document.getElementById('scan-btn');
+  btn.disabled = true;
+  btn.textContent = 'Escaneando…';
+  setStatus(`Contactando backend — ${domains.length} dominio(s)…`);
+
+  try {
+    const resp = await fetch(`${getApiUrl()}/check?domains=${encodeURIComponent(domains.join(','))}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    allResults = await resp.json();
+    setStatus('');
+    renderResults();
+  } catch (err) {
+    setStatus(`No se pudo conectar al backend: ${err.message}`, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Escanear';
+  }
+}
+
+function setStatus(msg, isError = false) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = isError ? 'status error' : 'status';
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRows();
+}
+
+function renderResults() {
+  document.getElementById('results-section').style.display = 'block';
+  const totalCookies = allResults.reduce((n, r) => n + (r.cookies ? r.cookies.length : 0), 0);
+  const alto = allResults.flatMap(r => r.cookies || []).filter(c => c.risk === 'ALTO').length;
+  let stats = `${allResults.length} dominio(s) · ${totalCookies} cookie(s)`;
+  if (alto) stats += ` · <span style="color:var(--red);font-weight:600">${alto} alto</span>`;
+  document.getElementById('results-stats').innerHTML = stats;
+  renderRows();
+}
+
+function renderRows() {
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = '';
+  const rows = buildRows();
+
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    tr.className = 'empty-row';
+    tr.innerHTML = `<td colspan="7">Sin resultados${activeFilter !== 'all' ? ' para este filtro' : ''}</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach(r => tbody.appendChild(r.el));
+}
+
+function buildRows() {
+  const rows = [];
+  for (const r of allResults) {
+    if (r.error) {
+      if (activeFilter !== 'all') continue;
+      rows.push({ rank: 99, domain: r.domain, el: makeErrorRow(r) });
+      continue;
+    }
+    if (!r.cookies.length) {
+      if (activeFilter !== 'all') continue;
+      rows.push({ rank: 50, domain: r.domain, el: makeNoCookiesRow(r.domain) });
+      continue;
+    }
+    for (const c of r.cookies) {
+      if (activeFilter !== 'all' && c.risk !== activeFilter) continue;
+      rows.push({ rank: riskRank(c.risk), domain: r.domain, el: makeCookieRow(r.domain, c) });
+    }
+  }
+  rows.sort((a, b) => a.rank - b.rank || a.domain.localeCompare(b.domain));
+  return rows;
+}
+
+function riskRank(risk) {
+  return risk === 'ALTO' ? 0 : risk === 'MEDIO' ? 1 : 2;
+}
+
+function makeCookieRow(domain, c) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${esc(domain)}</td>
+    <td><code>${esc(c.name)}</code></td>
+    <td>${fmtSameSite(c)}</td>
+    <td class="${c.secure ? 'check' : 'cross'}">${c.secure ? '✔' : '✘'}</td>
+    <td class="${c.httponly ? 'check' : 'cross'}">${c.httponly ? '✔' : '✘'}</td>
+    <td><span class="badge badge-${badgeClass(c.risk)}">${esc(c.risk)}</span></td>
+    <td>${esc(c.issue)}</td>`;
+  return tr;
+}
+
+function makeErrorRow(r) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${esc(r.domain)}</td>
+    <td>—</td><td>—</td><td>—</td><td>—</td>
+    <td><span class="badge badge-error">ERROR</span></td>
+    <td style="font-size:0.75rem;color:var(--muted)">${esc(r.error)}</td>`;
+  return tr;
+}
+
+function makeNoCookiesRow(domain) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${esc(domain)}</td>
+    <td colspan="5" style="color:var(--muted)">Sin cookies Set-Cookie en respuesta</td>
+    <td>—</td>`;
+  return tr;
+}
+
+function fmtSameSite(c) {
+  if (!c.samesite) return '<span class="ss-missing">—</span>';
+  if (c.samesite === 'None' && !c.secure) return '<span class="ss-none-bad">None</span>';
+  if (c.samesite === 'None') return '<span class="ss-none-ok">None</span>';
+  if (c.samesite === 'Strict' || c.samesite === 'Lax') return `<span class="ss-good">${esc(c.samesite)}</span>`;
+  return esc(c.samesite);
+}
+
+function badgeClass(risk) {
+  return risk === 'ALTO' ? 'alto' : risk === 'MEDIO' ? 'medio' : 'info';
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function exportCSV() {
+  const rows = [['Dominio', 'Cookie', 'SameSite', 'Secure', 'HttpOnly', 'Riesgo', 'Hallazgo']];
+  for (const r of allResults) {
+    if (r.error) { rows.push([r.domain, '', '', '', '', 'ERROR', r.error]); continue; }
+    if (!r.cookies.length) { rows.push([r.domain, '', '', '', '', '', 'Sin cookies']); continue; }
+    for (const c of r.cookies) {
+      rows.push([r.domain, c.name, c.samesite || '', c.secure ? 'Sí' : 'No', c.httponly ? 'Sí' : 'No', c.risk, c.issue]);
+    }
+  }
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = 'cookie-samesite-check.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
